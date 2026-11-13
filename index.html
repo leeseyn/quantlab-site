@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>QuantLab 추천 기록</title>
+<style>
+  :root{--bg:#0F1B2D;--panel:#16243A;--panel2:#1C2D47;--line:#2A3D5C;--text:#F1F4F9;--sub:#8A9BB5;--up:#FF6B6B;--down:#4DABF7;--ok:#51CF66;--warn:#FCC419}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;padding:0 0 40px;-webkit-text-size-adjust:100%;word-break:keep-all}
+  header{position:sticky;top:0;z-index:5;background:rgba(15,27,45,.96);backdrop-filter:blur(8px);padding:calc(10px + env(safe-area-inset-top)) 16px 10px;border-bottom:1px solid var(--line)}
+  .brand{font-weight:800;font-size:13px;color:var(--sub);letter-spacing:.04em}
+  .datebar{display:flex;align-items:center;gap:8px;margin-top:6px}
+  .datebar button{background:var(--panel2);border:0;color:var(--text);width:36px;height:36px;border-radius:10px;font-size:18px}
+  .datebar button:disabled{opacity:.3}
+  .datebar select{flex:1;appearance:none;background:var(--panel2);color:var(--text);border:0;border-radius:10px;height:36px;padding:0 12px;font:inherit;font-weight:700;font-size:17px;text-align:center}
+  main{padding:12px 16px;display:grid;gap:12px;max-width:640px;margin:0 auto}
+  .card{background:var(--panel);border-radius:14px;padding:14px}
+  .card h2{font-size:13px;color:var(--sub);font-weight:600;margin-bottom:10px}
+  .idx{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .idx div{background:var(--panel2);border-radius:10px;padding:8px}
+  .idx b{display:block;font-size:12px;color:var(--sub);font-weight:500}
+  .idx span{font-size:15px;font-weight:700}
+  .idx small{display:block;font-size:12px}
+  .events .mk{font-size:12px;font-weight:700;color:var(--sub);margin:8px 0 4px}
+  .events .mk:first-of-type{margin-top:0}
+  .events li{list-style:none;padding-left:12px;position:relative;margin:3px 0;font-size:14px}
+  .events li:before{content:"";position:absolute;left:0;top:9px;width:5px;height:5px;border-radius:50%;background:var(--sub)}
+  .tabs{display:flex;gap:6px}
+  .tabs button{flex:1;background:var(--panel);color:var(--sub);border:0;border-radius:10px;height:40px;font:inherit;font-weight:700}
+  .tabs button.on{background:var(--text);color:var(--bg)}
+  .tabs button:disabled{opacity:.35}
+  .seg{display:flex;background:var(--panel);border-radius:10px;padding:3px}
+  .seg button{flex:1;border:0;background:none;color:var(--sub);height:32px;border-radius:8px;font:inherit;font-weight:600}
+  .seg button.on{background:var(--panel2);color:var(--text)}
+  .meta{font-size:12px;color:var(--sub);display:flex;justify-content:space-between}
+  .stock{background:var(--panel);border-radius:14px;padding:14px;display:grid;gap:8px}
+  .row1{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+  .nm{font-weight:800;font-size:17px}
+  .tk{font-size:12px;color:var(--sub)}
+  .chg{text-align:right}
+  .chg .p{font-size:20px;font-weight:800}
+  .chg .lb{font-size:11px;color:var(--sub)}
+  .chg .px{font-size:12px;color:var(--sub)}
+  .up{color:var(--up)} .down{color:var(--down)}
+  .why{font-size:14px;background:var(--panel2);border-radius:10px;padding:8px 10px}
+  .why b{color:var(--sub);font-weight:600;margin-right:6px}
+  .st{font-size:12px;display:flex;gap:6px;flex-wrap:wrap}
+  .chip{border-radius:999px;padding:3px 9px;background:var(--panel2);color:var(--sub)}
+  .chip.ok{background:rgba(81,207,102,.15);color:var(--ok)}
+  .chip.bad{background:rgba(255,107,107,.15);color:var(--up)}
+  .chip.warn{background:rgba(252,196,25,.15);color:var(--warn)}
+  .empty{color:var(--sub);text-align:center;padding:30px 0}
+  footer{color:var(--sub);font-size:12px;text-align:center;padding:8px 16px}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">QUANTLAB · 추천 기록</div>
+  <div class="datebar">
+    <button id="prev" aria-label="이전 날짜">‹</button>
+    <select id="date" aria-label="날짜 선택"></select>
+    <button id="next" aria-label="다음 날짜">›</button>
+  </div>
+</header>
+<main>
+  <section class="card"><h2 id="mtitle">시장 지표</h2><div class="idx" id="idx"></div></section>
+  <section class="card events" id="events"><h2>그날의 큰 이슈</h2><div id="evbody"></div></section>
+  <div class="tabs" id="tabs"></div>
+  <div class="seg" id="seg"><button data-m="KR" class="on">국내</button><button data-m="US">미국</button></div>
+  <div class="meta"><span id="hinfo"></span><span id="asof"></span></div>
+  <div id="list" style="display:grid;gap:10px"></div>
+</main>
+<footer>개인 연구용 · 과거 데이터 기반 가설이며 투자 권유가 아닙니다</footer>
+<script>
+const H={W:"주간",M:"월간",Q:"분기"}, HD={W:5,M:21,Q:63};
+const SEC={IT:"정보기술",COMM:"커뮤니케이션",DISC:"경기소비재",STAP:"필수소비재",HLTH:"헬스케어",FIN:"금융",INDU:"산업재",MATL:"소재",ENGY:"에너지",UTIL:"유틸리티",REIT:"부동산"};
+let D=null, cur=null, hz="W", mk="KR";
+const $=s=>document.querySelector(s);
+const pct=v=>v==null?"–":(v>0?"+":"")+(v*100).toFixed(1)+"%";
+const cls=v=>v==null?"":v>=0?"up":"down";
+const money=(v,m)=>v==null?"–":m==="KR"?Math.round(v).toLocaleString("ko-KR")+"원":"$"+v.toFixed(2);
+const wk=d=>"일월화수목금토"[new Date(d+"T00:00:00").getDay()];
+
+fetch("data.json?"+Date.now()).then(r=>r.json()).then(j=>{
+  D=j; const ds=Object.keys(D.days).sort().reverse();
+  $("#date").innerHTML=ds.map(d=>`<option value="${d}">${d.slice(5).replace("-","/")} (${wk(d)}) 장마감</option>`).join("");
+  const q=new URLSearchParams(location.search).get("d");
+  cur=ds.includes(q)?q:ds[0];
+  $("#date").value=cur; render();
+});
+$("#date").onchange=e=>{cur=e.target.value;render()};
+$("#prev").onclick=()=>step(1); $("#next").onclick=()=>step(-1);
+function step(k){const ds=[...$("#date").options].map(o=>o.value);const i=ds.indexOf(cur)+k;if(ds[i]){cur=ds[i];$("#date").value=cur;render()}}
+$("#seg").onclick=e=>{if(!e.target.dataset.m)return;mk=e.target.dataset.m;[...$("#seg").children].forEach(b=>b.classList.toggle("on",b.dataset.m===mk));renderList()};
+
+function render(){
+  const ds=[...$("#date").options].map(o=>o.value), i=ds.indexOf(cur);
+  $("#prev").disabled=!ds[i+1]; $("#next").disabled=!ds[i-1];
+  history.replaceState(null,"","?d="+cur);
+  const day=D.days[cur];
+  $("#idx").innerHTML=(day.indices||[]).map(x=>`<div><b>${x.name}</b><span>${x.value}</span><small class="${cls(x.chg)}">${x.chg==null?(x.note||""):pct(x.chg)}</small></div>`).join("");
+  const ev=day.events||{};
+  $("#evbody").innerHTML=["US","KR"].filter(m=>(ev[m]||[]).length).map(m=>`<div class="mk">${m==="US"?"🇺🇸 미국장":"🇰🇷 국내장"}</div><ul>${ev[m].map(t=>`<li>${t}</li>`).join("")}</ul>`).join("")||`<div class="empty" style="padding:6px 0">정리된 이슈 없음</div>`;
+  const has=h=>day.picks.some(p=>p.h===h);
+  if(!has(hz)) hz=["W","M","Q"].find(has)||"W";
+  $("#tabs").innerHTML=["W","M","Q"].map(h=>`<button data-h="${h}" class="${h===hz?"on":""}" ${has(h)?"":"disabled"}>${H[h]}</button>`).join("");
+  $("#tabs").onclick=e=>{if(e.target.dataset.h&&!e.target.disabled){hz=e.target.dataset.h;render()}};
+  renderList();
+}
+function renderList(){
+  const day=D.days[cur], ps=day.picks.filter(p=>p.h===hz&&p.market===mk);
+  const c=(day.confidence||{})[hz];
+  $("#hinfo").textContent=`${H[hz]} · ${HD[hz]}거래일 보유${c?" · 신뢰도 "+c:""}`;
+  $("#asof").textContent=D.price_asof?`현재가 ${D.price_asof.slice(5).replace("-","/")} 종가`:"";
+  $("#list").innerHTML=ps.length?ps.map(p=>{
+    const r=p.ret_now, st=p.status==="closed"
+      ? `<span class="chip ${p.result==="성공"?"ok":p.ret<=0?"bad":""}">${HD[p.h]}일 채점: ${p.result} ${pct(p.ret)}</span>`+(p.fail?`<span class="chip bad">${p.fail}</span>`:"")+(p.fail_detail?`<div style="width:100%;color:var(--sub);font-size:12px;margin-top:2px">${p.fail_detail}</div>`:"")
+      : `<span class="chip">보유 ${p.days_held}/${HD[p.h]}일</span>`;
+    return `<article class="stock">
+      <div class="row1"><div><div class="nm">${p.name}</div><div class="tk">${p.ticker} · ${SEC[p.sector]||p.sector}</div></div>
+        <div class="chg"><div class="lb">선정 후 지금까지</div><div class="p ${cls(r)}">${pct(r)}</div><div class="px">${money(p.price_at,p.market)} → ${money(p.price_now,p.market)}</div></div></div>
+      <div class="why"><b>선정 사유</b>${p.reasons}</div>
+      <div class="st">${st}${p.warn?`<span class="chip warn">${p.warn}</span>`:""}</div>
+    </article>`}).join(""):`<div class="empty">이 날은 ${H[hz]} ${mk==="KR"?"국내":"미국"} 추천이 없어요</div>`;
+}
+</script>
+</body>
+</html>
