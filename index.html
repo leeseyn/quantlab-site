@@ -51,6 +51,12 @@
   .chip.ok{background:rgba(81,207,102,.15);color:var(--ok)}
   .chip.bad{background:rgba(255,107,107,.15);color:var(--up)}
   .chip.warn{background:rgba(252,196,25,.15);color:var(--warn)}
+.ready .hr{display:flex;align-items:center;gap:8px;margin-top:10px;font-weight:700}
+  .ready .hr:first-of-type{margin-top:0}
+  .ready .dots{display:flex;gap:3px}.ready .dots i{width:10px;height:10px;border-radius:50%;background:var(--line)}.ready .dots i.on{background:var(--ok)}
+  .ready .stg{margin-left:auto;font-size:12px;color:var(--sub);font-weight:600}.ready .stg.go{color:var(--ok)}
+  .ready ul{margin:4px 0 0;padding:0}.ready li{list-style:none;font-size:13px;margin:2px 0;color:var(--sub)}
+  .ready li b{color:var(--text);font-weight:600}
   .empty{color:var(--sub);text-align:center;padding:30px 0}
   footer{color:var(--sub);font-size:12px;text-align:center;padding:8px 16px}
 </style>
@@ -65,6 +71,7 @@
   </div>
 </header>
 <main>
+  <section class="card ready" id="ready" hidden><h2>실전 준비도 <span style="font-weight:400">· 3개 모두 통과한 기간만 소액 실전</span></h2><div id="rbody"></div></section>
   <section class="card"><h2 id="mtitle">시장 지표</h2><div class="idx" id="idx"></div></section>
   <section class="card events" id="events"><h2>그날의 큰 이슈</h2><div id="evbody"></div></section>
   <div class="tabs" id="tabs"></div>
@@ -88,7 +95,7 @@ fetch("data.json?"+Date.now()).then(r=>r.json()).then(j=>{
   $("#date").innerHTML=ds.map(d=>`<option value="${d}">${d.slice(5).replace("-","/")} (${wk(d)}) 장마감</option>`).join("");
   const q=new URLSearchParams(location.search).get("d");
   cur=ds.includes(q)?q:ds[0];
-  $("#date").value=cur; render();
+  $("#date").value=cur; render(); renderReady();
 });
 $("#date").onchange=e=>{cur=e.target.value;render()};
 $("#prev").onclick=()=>step(1); $("#next").onclick=()=>step(-1);
@@ -108,6 +115,13 @@ function render(){
   $("#tabs").innerHTML=["W","M","Q"].map(h=>`<button data-h="${h}" class="${h===hz?"on":""}" ${has(h)?"":"disabled"}>${H[h]}</button>`).join("");
   $("#tabs").onclick=e=>{if(e.target.dataset.h&&!e.target.disabled){hz=e.target.dataset.h;render()}};
   renderList();
+}
+function renderReady(){
+  const R=D.readiness||{}; if(!Object.keys(R).length) return;
+  $("#ready").hidden=false;
+  $("#rbody").innerHTML=["W","M","Q"].filter(h=>R[h]).map(h=>{const r=R[h];
+    return `<div class="hr">${H[h]}<span class="dots">${r.checks.map(c=>`<i class="${c.ok?"on":""}"></i>`).join("")}</span><span style="font-size:13px">${r.passed}/3</span><span class="stg ${r.passed===3?"go":""}">${r.stage}</span></div>
+    <ul>${r.checks.map(c=>`<li>${c.ok?"✅":"⬜"} <b>${c.label}</b> — ${c.now}</li>`).join("")}</ul>`}).join("");
 }
 function renderList(){
   const day=D.days[cur], ps=day.picks.filter(p=>p.h===hz&&p.market===mk);
