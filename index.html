@@ -70,6 +70,11 @@
   .nl{list-style:none;margin:4px 0 0;padding:0}.nl li{font-size:13px;margin:4px 0;line-height:1.45}
   .nl a{color:var(--text);text-decoration:none}.nl small{color:var(--sub);margin-left:4px}
   .why.nws{margin-top:6px}.why.nws .nl li{margin:2px 0}
+.spark{margin:8px 0 2px}.spark svg{width:100%;height:92px;display:block}
+  .spark .lg{font-size:11px;color:var(--sub);display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+  .spark .lg i{display:inline-block;width:10px;height:3px;margin-left:6px}.spark .lg i.dash{border-top:2px dashed #e74c3c;height:0}
+  .ct{width:100%;border-collapse:collapse;font-size:13px;margin-top:4px}.ct th{font-weight:500;color:var(--sub);text-align:left;padding:4px 2px;border-bottom:1px solid var(--line)}
+  .ct td{padding:5px 2px;border-bottom:1px solid var(--line)}.ct td.ok{color:var(--ok);font-weight:600}
   .empty{color:var(--sub);text-align:center;padding:30px 0}
   footer{color:var(--sub);font-size:12px;text-align:center;padding:8px 16px}
 </style>
@@ -88,6 +93,7 @@
     <div class="rnote">3개 조건을 모두 통과한 기간만 소액 실전</div><div id="rbody"></div></details>
   <section class="card"><h2 id="mtitle">시장 지표</h2><div class="idx" id="idx"></div></section>
   <section class="card events" id="events"><h2>그날의 큰 이슈</h2><div id="evbody"></div></section>
+  <details class="card news" id="ccheck" hidden><summary><b>차트 신호 검증</b><span id="csum"></span></summary><div id="cbody"></div></details>
   <details class="card news" id="analyst" hidden><summary><b>분석가 시각</b><span id="asum"></span></summary><div id="abody"></div></details>
   <details class="card news" id="news" hidden><summary><b>그날의 뉴스</b><span id="nsum"></span></summary>
     <div class="seg mini" id="nseg"><button data-m="KR">국내</button><button data-m="US">미국</button></div>
@@ -113,7 +119,7 @@ fetch("data.json?"+Date.now()).then(r=>r.json()).then(j=>{
   $("#date").innerHTML=ds.map(d=>`<option value="${d}">${d.slice(5).replace("-","/")} (${wk(d)}) 장마감</option>`).join("");
   const q=new URLSearchParams(location.search).get("d");
   cur=ds.includes(q)?q:ds[0];
-  $("#date").value=cur; render(); renderReady();
+  $("#date").value=cur; render(); renderReady(); renderChartCheck();
 });
 $("#date").onchange=e=>{cur=e.target.value;render()};
 $("#prev").onclick=()=>step(1); $("#next").onclick=()=>step(-1);
@@ -169,6 +175,31 @@ function renderReady(){
     return `<div class="hr">${H[h]}<span class="dots">${r.checks.map(c=>`<i class="${c.ok?"on":""}"></i>`).join("")}</span><span style="font-size:13px">${r.passed}/3</span><span class="stg ${r.passed===3?"go":""}">${r.stage}</span></div>
     <ul>${r.checks.map(c=>`<li>${c.ok?"✅":"⬜"} <b>${c.label}</b> — ${c.now}</li>`).join("")}</ul>`}).join("");
 }
+// 미니 차트: 최근 6개월 종가 + 20·60일선 + 1년 최고가선 + 선정일 표시
+function spark(tk,sel){
+  const C=D.charts||{}, X=(C.t||{})[tk]; if(!X||!C.dates) return "";
+  const raw=X.c, n=raw.length, ma=k=>raw.map((v,i)=>{if(v==null)return null;let a=[];for(let j=i;j>=0&&a.length<k;j--)if(raw[j]!=null)a.push(raw[j]);return a.length===k?a.reduce((x,y)=>x+y)/k:null});
+  const m20=ma(20), m60=ma(60), st=Math.max(0,n-126), W=320, Hh=92, pad=4;
+  const vals=[...raw.slice(st),...m20.slice(st),...m60.slice(st),X.hi52].filter(v=>v!=null);
+  const lo=Math.min(...vals), hi=Math.max(...vals), sx=i=>pad+(i-st)/(n-1-st)*(W-2*pad), sy=v=>Hh-pad-(v-lo)/(hi-lo||1)*(Hh-2*pad);
+  const path=a=>{let d="",up=false;for(let i=st;i<n;i++){if(a[i]==null){up=false;continue}d+=(up?"L":"M")+sx(i).toFixed(1)+" "+sy(a[i]).toFixed(1);up=true}return d};
+  const si=C.dates.indexOf(sel), mark=si>=st&&raw[si]!=null?`<circle cx="${sx(si).toFixed(1)}" cy="${sy(raw[si]).toFixed(1)}" r="3.2" fill="#f5b041"/>`:"";
+  return `<div class="spark"><svg viewBox="0 0 ${W} ${Hh}" preserveAspectRatio="none">
+    <line x1="${pad}" x2="${W-pad}" y1="${sy(X.hi52).toFixed(1)}" y2="${sy(X.hi52).toFixed(1)}" stroke="#e74c3c" stroke-dasharray="3 3" stroke-width="1" opacity=".7"/>
+    <path d="${path(m60)}" fill="none" stroke="#8e7cc3" stroke-width="1.2"/><path d="${path(m20)}" fill="none" stroke="#5dade2" stroke-width="1.2"/>
+    <path d="${path(raw)}" fill="none" stroke="var(--text)" stroke-width="1.6"/>${mark}</svg>
+    <div class="lg"><i style="background:var(--text)"></i>종가 <i style="background:#5dade2"></i>20일선 <i style="background:#8e7cc3"></i>60일선 <i class="dash"></i>1년 최고가 <i style="background:#f5b041;border-radius:50%"></i>선정일</div></div>`;
+}
+function renderChartCheck(){
+  const K=D.chart_check||{}; if(!Object.keys(K).length) return;
+  $("#ccheck").hidden=false;
+  const ok=r=>r.w>0?(r.t>=2?"검증 통과":"약하게 반영"):(r.n<8?"자료 부족":(r.t!=null&&r.t<=-2?"반대로 작동":"효과 없음"));
+  const n=Object.values(K).flat().filter(r=>r.w>0&&r.t>=2).length;
+  $("#csum").textContent=`검증 통과 ${n}개`;
+  $("#cbody").innerHTML=["W","M","Q"].filter(h=>K[h]).map(h=>`<div class="hr" style="margin-top:10px;font-weight:700">${H[h]}</div>
+    <table class="ct"><tr><th>신호</th><th>예측력(IC)</th><th>t</th><th>상태</th></tr>${K[h].map(r=>`<tr><td>${esc(r.label)}</td><td>${r.ic==null?"–":(r.ic>0?"+":"")+r.ic.toFixed(3)}</td><td>${r.t==null?"–":r.t.toFixed(1)}</td><td class="${r.w>0&&r.t>=2?"ok":""}">${ok(r)}${r.w>0?` ${Math.round(r.w*100)}%`:""}</td></tr>`).join("")}</table>`).join("")
+    +`<div class="rnote">IC: 신호 점수와 실제 다음 기간 수익률 순위의 상관(+면 신호대로 움직임). t가 2 이상이면 우연이 아닐 가능성이 큼. 비중은 과거 예측력으로 3팀이 정함.</div>`;
+}
 function renderList(){
   const day=D.days[cur], ps=day.picks.filter(p=>p.h===hz&&p.market===mk);
   const c=(day.confidence||{})[hz];
@@ -181,6 +212,7 @@ function renderList(){
     return `<article class="stock">
       <div class="row1"><div><div class="nm">${p.name}</div><div class="tk">${p.ticker} · ${SEC[p.sector]||p.sector}</div></div>
         <div class="chg"><div class="lb">선정 후 지금까지</div><div class="p ${cls(r)}">${pct(r)}</div><div class="px">${money(p.price_at,p.market)} → ${money(p.price_now,p.market)}</div></div></div>
+      ${spark(p.ticker,cur)}
       <div class="why"><b>선정 사유</b>${p.reasons}</div>
       ${(((day.news||{}).picks||{})[p.ticker]||[]).length?`<div class="why nws"><b>그날 관련 뉴스</b>${nlist(day.news.picks[p.ticker])}</div>`:""}
       <div class="st">${st}${p.warn?`<span class="chip warn">${p.warn}</span>`:""}</div>
